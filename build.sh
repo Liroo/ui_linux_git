@@ -30,11 +30,14 @@ git_branch=""
 is_git() {
   if [ ! -d ./.git ]
   then
-    echo -e "${red}This is not a git repository.${white}"
-    return -1
+    echo -e "${red}Git repo : No git repository found.${white}"
   else
     echo -e "${orange}Git repo : ${blue}$(git ls-remote --get-url)${white}"
   fi
+}
+
+create_git() {
+  exit
 }
 
 branch() {
@@ -101,7 +104,7 @@ build() {
   is_git
   if [ $? -eq -1 ]
   then
-    return 1
+    create_git
   fi
 
   branch
