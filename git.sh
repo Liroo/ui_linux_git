@@ -120,27 +120,46 @@ create_git() {
     do
       if [ $opt != "-" ]
       then
-        blih -u $user_name -t $opt repository create $git_name >> /dev/null # 1 is fail 0 is ok
+        res=$(blih -u $user_name -t $opt repository create $git_name) # 1 is fail 0 is ok
+        if [ $? -ne 0 ]
+        then
+          whiptail --title "Create" --msgbox "$res" \
+          $((8 + `echo $res | wc -l`)) 60
+          return
+        fi
+        whiptail --title "Create" --msgbox "$res" \
+        $((8 + `echo $res | wc -l`)) 60
+        git_url="git@git.epitech.eu:/$user_name/$git_name"
       fi
     done
   else
-    curl https://$user_name:$password@api.github.com/user/repos \
-    -d "{\"name\":\"$git_name\"}" >> /dev/null # grep error to check if there is error
+    res=$(curl --silent https://$user_name:$password@api.github.com/user/repos \
+    -d "{\"name\":\"$git_name\"}") # grep error to check if there is error
+    echo $res | grep "error" >> /dev/null
+    if [ $? -eq 1 ]
+    then
+      whiptail --title "Create" --msgbox "Repository "$git_name" created !" \
+      9 60
+      git_url="https://github.com/$user_name/$git_name.git"
+    else
+      echo $res >> build.log
+      whiptail --title "Create" --msgbox "Creation failed, check build.log !" \
+      9 60
+      return
+    fi
   fi
   echo $answer | grep "2" >> /dev/null
   if [ $? -eq 0 ]
   then
-    git clone $git_url --quiet
+    res="$(git clone $git_url 3>&1 2>&1)"
     if [ -d $git_name ]
     then
-      echo -e "${orange}Git repo : ${blue}Repository successfully cloned !${white}"
       cd $git_name
-      whiptail --title "Clone" --msgbox "Switch to git repository $git_name." \
+      whiptail --title "Clone" --msgbox "Clone and switch to git repository $git_name successfull." \
       9 60
     else
-      echo -e "${orange}Git repo : ${red}Clone failed !${white}"
-      whiptail --title "Clone" --msgbox "Clone failed, check your param's." \
-      9 60
+      whiptail --title "Clone" --msgbox "$res" \
+      $((8 + `echo $res | wc -l`)) 60
     fi
   fi
 }
