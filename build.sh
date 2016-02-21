@@ -20,7 +20,8 @@ orange="\e[33m"
 blue="\e[36m"
 white="\e[0m"
 
-# git
+# git && blih
+blih_select=""
 git_branch_select=""
 git_branch=""
 # git_url=$(git ls-remote --get-url)
@@ -30,32 +31,37 @@ git_branch=""
 is_git() {
   if [ ! -d ./.git ]
   then
-    echo -e "${red}Git repo : No git repository found.${white}"
+    echo -e "${orange}Git repo : ${red}No git repository found.${white}"
+    return 1
   else
     echo -e "${orange}Git repo : ${blue}$(git ls-remote --get-url)${white}"
   fi
 }
 
 create_git() {
-  exit
+  answer=$(whiptail --title "Git repository" --checklist "Choose an option" \
+  20 60 5 \
+  "1" "Create repository" \
+  "2" "Chekout branch" \
+  "3" "Add contributor" \
+  "4" "Pull" \
+  "5" "Push" 3>&1 1>&2 2>&3)
 }
 
-branch() {
+get_branch() {
   branchOutput=`git for-each-ref refs/heads/ | head -n 10`
-  declare -a branches
   let xx=0
 
   for branch in $branchOutput
   do
     xx=`expr $xx + 1`
-    branches=("{branches[@]}" "$branch")
     branchName=`echo "$branch" | sed 's/.*refs\/heads\///'`
 
     if [ `expr $xx % 3` -eq 0 ]
     then
-      git_branch+=$branchName
-      git_branch+=" "
       git_branch+=`expr $xx / 3`
+      git_branch+=" "
+      git_branch+=$branchName
       git_branch+=" "
     fi
   done
@@ -68,10 +74,25 @@ branch() {
     echo -e "${orange}Git branch : ${red}none branch selected, exit.${white}"
     exit
   fi
+  let xx=0
+  for branch in $git_branch
+  do
+  xx=`expr $xx + 1`
+    if [ $xx -eq $(($git_branch_select*2)) ]
+    then
+      git_branch_select=$branch
+      break;break
+    fi
+  done
   echo -e "${orange}Git branch : ${blue}branch $git_branch_select selected !${white}"
 }
 
+contributor() {
+  echo "Tellement pas fait"
+}
+
 pull() {
+  echo "A AMELIORER !!!!"
   git checkout $git_branch_select --quiet
   git fetch --quiet
 
@@ -96,20 +117,66 @@ pull() {
 }
 
 push() {
+  echo "Push non fait :3"
   return
+}
+
+non_git_menu() {
+  want_git=$(whiptail --title "Non git repository" --menu "Choose an option" \
+  20 60 1 \
+  "1" "Create repository" 3>&1 1>&2 2>&3)
+  echo $want_git
+  if [ -z $want_git ]
+  then
+    echo -e "${orange}Build : ${red}Thanks to use my script ! :)${white}"
+    exit
+  fi
+  create_git
+  git_menu
+}
+
+git_menu() {
+  answer=$(whiptail --title "Git repository" --menu "Choose an option" \
+  20 60 5 \
+  "1" "Create repository" \
+  "2" "Chekout branch" \
+  "3" "Add contributor" \
+  "4" "Pull" \
+  "5" "Push" 3>&1 1>&2 2>&3)
+  if [ -z $answer ]
+  then
+    if [ ! $git_branch_select == "master" ]
+    then
+      echo -e "${orange}Git branch : ${blue}If you want to checkout your origin banch, use 'git checkout master'.${white}"
+    fi
+    echo -e "${orange}Build : ${red}Thanks to use my script ! :)${white}"
+    exit
+  fi
+  case $answer in
+    "1") create_git
+    ;;
+    "2") get_branch
+    ;;
+    "3") contributor
+    ;;
+    "4") pull
+    ;;
+    "5") push
+    ;;
+  esac
+  git_menu
 }
 
 # Considered as main of script shell
 build() {
   is_git
-  if [ $? -eq -1 ]
+  if [ $? -eq 1 ]
   then
-    create_git
+    non_git_menu
+  else
+    git_menu
   fi
 
-  branch
-  pull
-  push
   if [ ! $git_branch_select == "master" ]
   then
     echo -e "${orange}Git branch : ${blue}If you want to checkout your origin banch, use 'git checkout master'.${white}"
